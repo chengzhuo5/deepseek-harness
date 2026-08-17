@@ -41,19 +41,27 @@ export const WIDER_MODES: Record<string, readonly SandboxMode[]> = {
 export const ESCALATION_TARGETS: readonly SandboxMode[] = ['workspace-write', 'danger-full-access']
 
 /**
- * Validate the escalation argument pairing a tool schema cannot express:
- * `sandbox_permissions` and `justification` travel together — an approval
- * prompt without a reason, or a reason driving nothing, is a malformed ask —
- * and the justification must be a non-empty sentence.
+ * Validate the escalation arguments a tool schema cannot express. A requested
+ * mode no wider than the effective mode is redundant, so its paired fields do
+ * not require a justification or approval. Other requests require both fields
+ * and a non-empty justification.
  * @param sandboxPermissions - the raw `sandbox_permissions` argument, if given.
  * @param justification - the raw `justification` argument, if given.
+ * @param effectiveMode - the resolved mode for this call, when a sandbox applies.
  */
-export function validateEscalationArgs(sandboxPermissions: string | undefined, justification: string | undefined): void {
-  if (sandboxPermissions !== undefined && justification === undefined) {
-    throw new Error('invalid escalation: sandbox_permissions requires a justification')
-  }
+export function validateEscalationArgs(
+  sandboxPermissions: string | undefined,
+  justification: string | undefined,
+  effectiveMode?: SandboxMode,
+): void {
   if (justification !== undefined && sandboxPermissions === undefined) {
     throw new Error('invalid escalation: justification is only valid together with sandbox_permissions')
+  }
+  if (sandboxPermissions !== undefined && effectiveMode !== undefined && isRedundantEscalation(sandboxPermissions, effectiveMode)) {
+    return
+  }
+  if (sandboxPermissions !== undefined && justification === undefined) {
+    throw new Error('invalid escalation: sandbox_permissions requires a justification')
   }
   if (justification !== undefined && justification.trim().length === 0) {
     throw new Error('invalid justification: expected a non-empty sentence')
@@ -83,6 +91,11 @@ export function sandboxDenialMarker(mode: SandboxMode): string {
  */
 export function escalationHintMarker(subject: string): string {
   return `[sandbox: escalation available — retry this exact ${subject} once with sandbox_permissions (the narrowest wider mode that suffices) + justification; the approval prompt asks the user]`
+}
+
+/** Whether the requested mode is already available to this call. */
+function isRedundantEscalation(requestedMode: string, effectiveMode: SandboxMode): boolean {
+  return requestedMode === effectiveMode || (WIDER_MODES[requestedMode] ?? []).includes(effectiveMode)
 }
 
 /**
@@ -145,11 +158,10 @@ export interface EscalationRequest {
  * widening against the call's effective mode, then resolve the approval
  * channel, then map every outcome — the ordered fail-closed sequence both
  * enforcing families share. Returns the granted mode to stamp onto exactly
- * this call; throws the distinct verbatim text for every other path (a
- * non-widening request, a missing approval service, an agent-less execution,
- * a rejection, a cancellation, an unanswerable ask) — the tool registry turns
- * the throw into the call's isError result, and nothing has run. A
- * non-widening request never prompts a human.
+ * this call; a redundant target returns the effective mode without validation
+ * or approval. A target that is neither redundant nor strictly wider, a missing
+ * approval service, an agent-less execution, a rejection, cancellation, or an
+ * unanswerable ask throws a distinct error before anything runs.
  * @param request - the escalation to judge (see {@link EscalationRequest}).
  * @param approval - the approval ingredients the tool holds (see {@link EscalationApproval}).
  * @returns the granted mode, consumed by the one call that asked.
@@ -159,6 +171,9 @@ export async function approveEscalation<A, C>(request: EscalationRequest, approv
   // Strict widening is an EXECUTION check against the call's effective mode —
   // deliberately not a schema constraint (the enum is the closed target
   // vocabulary; the effective mode is per-call truth).
+  if (isRedundantEscalation(mode, effectiveMode)) {
+    return effectiveMode
+  }
   if (!(WIDER_MODES[effectiveMode] ?? []).includes(mode as SandboxMode)) {
     throw new Error(`sandbox escalation to "${mode}" is not strictly wider than this call's current "${effectiveMode}" mode`)
   }

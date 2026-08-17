@@ -581,15 +581,15 @@ describe('sandbox escalation through ctx.approval', () => {
     expect(schema.parameters.properties).not.toHaveProperty('sandbox_permissions')
   })
 
-  it('rejects injected escalation without a sandbox and non-widening escalation without prompting', async () => {
+  it('rejects injected escalation without a sandbox and an unknown schema target without prompting', async () => {
     const plain = await setup()
     expect(text(await call(plain.ctx, 'pwsh', escalate))).toContain('not available in this composition')
 
     const { ctx } = await setupSandboxed(true)
     const prompted = vi.fn()
     ctx.on('approval/request', () => { prompted(); return Promise.resolve<ApprovalOutcome>('allowed-once') })
-    const result = await call(ctx, 'pwsh', { ...escalate, sandbox_permissions: 'workspace-write' }, sandboxAgent('workspace-write'))
-    expect(text(result)).toContain('not strictly wider')
+    const result = await call(ctx, 'pwsh', { ...escalate, sandbox_permissions: 'unknown-mode' }, sandboxAgent('workspace-write'))
+    expect(text(result)).toContain('sandbox_permissions" must be one of')
     expect(prompted).not.toHaveBeenCalled()
 
     const malformed = sandboxAgent()
@@ -598,6 +598,23 @@ describe('sandbox escalation through ctx.approval', () => {
       data: { mode: 'unknown-mode' },
     })
     expect(text(await call(ctx, 'pwsh', escalate, malformed))).toContain('not strictly wider')
+  })
+
+  it('runs redundant escalation fields under the standing full-access policy without prompting', async () => {
+    const { ctx, bash } = await setupSandboxed(true)
+    const prompted = vi.fn()
+    ctx.on('approval/request', () => { prompted(); return Promise.resolve<ApprovalOutcome>('allowed-once') })
+
+    const result = await call(ctx, 'pwsh', {
+      command: 'Write-Output ok',
+      description: 'run with full access',
+      sandbox_permissions: 'workspace-write',
+      justification: ' ',
+    }, sandboxAgent('danger-full-access'))
+
+    expect(result.isError).toBe(false)
+    expect(prompted).not.toHaveBeenCalled()
+    expect(bash.modes).toEqual(['danger-full-access'])
   })
 
   it('fails closed when approval cannot be routed', async () => {

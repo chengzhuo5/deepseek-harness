@@ -85,8 +85,8 @@ export class FsSandboxController {
    *   unsandboxed backend.
    */
   async resolvePolicy(toolName: string, args: FsEscalationArgs, exec: ToolExecution): Promise<SandboxExecutionPolicy | undefined> {
-    validateEscalationArgs(args.sandbox_permissions, args.justification)
     const standingPolicy = this.policy?.resolve({ ...exec.agent ? { session: exec.agent.session } : {} })
+    validateEscalationArgs(args.sandbox_permissions, args.justification, standingPolicy?.mode)
     if (args.sandbox_permissions === undefined || args.justification === undefined) {
       return standingPolicy
     }
