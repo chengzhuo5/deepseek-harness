@@ -212,6 +212,58 @@ describe('model list editing', () => {
       ops: [{ op: 'set', path: ['providers', 'openai', 'models'], value: [{ id: 'acme-large', contextWindow: 65_536 }] }],
     })
   })
+  it('declares thinking levels on one model and writes them as reasoningEfforts', async () => {
+    const { mutate } = await mountSection()
+    openEditor('openai')
+    fireEvent.click(screen.getByRole('button', { name: en.addModel }))
+    fireEvent.change(screen.getByLabelText(en.modelId + ' 1'), { target: { value: 'acme-large' } })
+    expandModel(1)
+    // Off is stored valueless (pi-ai reads that as "supported, send nothing");
+    // every other level stores its id as the wire spelling.
+    fireEvent.click(screen.getByLabelText('Thinking levels 1 off'))
+    fireEvent.click(screen.getByLabelText('Thinking levels 1 low'))
+    fireEvent.click(screen.getByLabelText('Thinking levels 1 max'))
+    fireEvent.click(screen.getByText(en.apply))
+
+    await waitFor(() => { expect(mutate).toHaveBeenCalled() })
+    expect(firstMutate(mutate)).toMatchObject({
+      ns: 'llm-pi-ai',
+      ops: [{
+        op: 'set',
+        path: ['providers', 'openai', 'models'],
+        value: [{ id: 'acme-large', reasoningEfforts: { off: null, low: 'low', max: 'max' } }],
+      }],
+    })
+  })
+
+  it('removes the reasoningEfforts field when every thinking level is retracted', async () => {
+    const { mutate } = await mountSection({
+      providers: {
+        openai: {
+          apiKeyEnv: 'OPENAI_API_KEY',
+          baseURL: 'https://proxy.example/v1',
+          models: [{ id: 'acme-large', reasoningEfforts: { off: null, high: 'high' } }],
+        },
+      },
+    })
+    openEditor('openai')
+    expandModel(1)
+    // The declared levels arrive checked; the rest stay off.
+    expect(screen.getByLabelText('Thinking levels 1 off')).toHaveProperty('checked', true)
+    expect(screen.getByLabelText('Thinking levels 1 high')).toHaveProperty('checked', true)
+    expect(screen.getByLabelText('Thinking levels 1 low')).toHaveProperty('checked', false)
+
+    fireEvent.click(screen.getByLabelText('Thinking levels 1 off'))
+    fireEvent.click(screen.getByLabelText('Thinking levels 1 high'))
+    fireEvent.click(screen.getByText(en.apply))
+
+    await waitFor(() => { expect(mutate).toHaveBeenCalled() })
+    expect(firstMutate(mutate)).toMatchObject({
+      ns: 'llm-pi-ai',
+      ops: [{ op: 'set', path: ['providers', 'openai', 'models'], value: [{ id: 'acme-large' }] }],
+    })
+  })
+
 
   it('names a duplicate model id in the edit flow too', async () => {
     const { mutate } = await mountSection({

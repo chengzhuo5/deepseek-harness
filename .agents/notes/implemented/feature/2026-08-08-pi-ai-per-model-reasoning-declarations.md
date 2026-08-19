@@ -24,10 +24,15 @@ Two adjacent gaps compounded this. pi-ai decides the reasoning *wire dialect* (`
 - **A bare level list** (`reasoningEfforts: [off, high]`). Cannot express wire renames, and the catalog's own maps prove renames are real: 66 of 1230 installed map entries are non-identity (`off→none`, `minimal→low`, `low→LOW`, `high→default`).
 - **`{}` as the disable spelling.** Unimplementable: schemastery materializes an absent dict as `{}`, so every model without the field would have been force-disabled.
 - **Folding this into the route-level `reasoning` knob.** That knob is a *default selection*, not a capability set; it stays, and a declared model's efforts now bound what it can select.
+- **Expose editable wire spellings in the Models page.** A gateway may need a non-identity spelling, but the page cannot infer it from an OpenAI-compatible model listing. The checklist writes the common identity spelling and keeps gateway-specific spellings in `settings.yaml`.
 
 ## Consequences
 
-- The composer's effort pane works for hand-declared models with zero UI change — `resolveModelInfo` reports declared levels through the same seam catalog metadata uses (pinned by the `declared-reasoning` web scenario).
+- `ModelListEditor` exposes a per-row thinking-level checklist for pi-ai profiles. It writes each checked level as its identity wire spelling and writes `off` as `null`; a cleared checklist removes `reasoningEfforts`. `resolveModelInfo` then reports the declared levels to the composer.
 - #1860's deferred gap — a route-level effort a model cannot take failing its requests — now has an operator remedy: align the model's `reasoningEfforts` or drop the route default.
 - There is deliberately no spelling for returning one map key or compat field to "whatever the catalog said": the declaration is the whole offer, so keeping a catalog value means restating it. The README documents this.
 - `verify-package-invariants` is untouched: the feature adds configuration resolution, no new events or mutable runtime relations.
+
+## Testing
+
+`packages/client/ui-settings-models/tests/provider-form.client.spec.tsx` drives the per-model checklist through the rendered provider editor, including the persisted identity spellings, the valueless `off` entry, and removal when every level is cleared. `components.client.spec.tsx` rejects invalid `reasoningEfforts` values before a settings write.

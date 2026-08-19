@@ -68,13 +68,45 @@ export function formatCapacity(value: number): string {
   return String(value)
 }
 
+/**
+ * The pi-ai thinking levels one model may offer, in pi-ai's canonical order.
+ * The Models settings page cannot import the llm package (and must not drift
+ * from its spelling), so this is the shared vocabulary the model-list editor's
+ * thinking-levels control and the row validator both read. A pi-ai upgrade
+ * that adds a level updates its catalog drift gate; this list follows it.
+ */
+export const THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
+
+/** Membership set over {@link THINKING_LEVELS}, for row validation. */
+const THINKING_LEVEL_SET = new Set<string>(THINKING_LEVELS)
+
 /** A localized validation failure for one user-owned model array. */
 export interface DeepSeekModelsValidationFailure {
   /** Zero-based model position. */
   index: number
   /** Message key owned by the Models settings section. */
   key: 'modelIdRequired' | 'modelIdDuplicate' | 'modelNameInvalid' | 'modelContextInvalid'
-  | 'modelMaxTokensInvalid'
+  | 'modelMaxTokensInvalid' | 'modelReasoningInvalid'
+}
+
+/**
+ * The reasoning levels one model row explicitly declares, or `undefined` when
+ * it declares none. An absent field and an explicit `false` both mean "no
+ * declaration" — the adapter reads absent as inheriting the catalog entry and
+ * `false` as stripped — while a plain object is the declared level-to-wire
+ * dict, the same shape pi-ai's `reasoningEfforts` config entry takes.
+ * @param model - one model row.
+ * @returns a detached dict of declared level ids, or `undefined`.
+ */
+export function declaredReasoningEfforts(model: DeepSeekModelDraft): Record<string, string | null> | undefined {
+  const value = model['reasoningEfforts']
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  const dict: Record<string, string | null> = {}
+  const source = value as Record<string, unknown>
+  for (const [level, wire] of Object.entries(source)) {
+    if (typeof wire === 'string' || wire === null) dict[level] = wire
+  }
+  return dict
 }
 
 /** Convert a schema-validated catalog value into records without dropping hidden fields. */
@@ -117,6 +149,30 @@ export function validateDeepSeekModels(value: unknown): DeepSeekModelsValidation
     if (maxTokens !== undefined
       && (typeof maxTokens !== 'number' || !Number.isInteger(maxTokens) || maxTokens <= 0)) {
       return { index, key: 'modelMaxTokensInvalid' }
+    }
+    // The pi-ai field's adapter constraints, judged where the row is edited so
+    // a bad entry reads as a row the user can correct rather than a host
+    // refusal naming a path. The checks mirror pi-ai's resolveModelReasoning:
+    // undefined and false declare nothing (inherit / stripped), a declared
+    // dict must name only known levels with string-or-null wire spellings,
+    // only "off" may be valueless, and at least one level beyond "off" must
+    // be offered or the model could never actually think.
+    const reasoningEfforts = model['reasoningEfforts']
+    if (reasoningEfforts !== undefined && reasoningEfforts !== false) {
+      if (typeof reasoningEfforts !== 'object' || reasoningEfforts === null || Array.isArray(reasoningEfforts)) {
+        return { index, key: 'modelReasoningInvalid' }
+      }
+      const entries = Object.entries(reasoningEfforts)
+      if (!entries.some(([level]) => level !== 'off')) {
+        return { index, key: 'modelReasoningInvalid' }
+      }
+      for (const [level, wire] of entries) {
+        if (!THINKING_LEVEL_SET.has(level)) return { index, key: 'modelReasoningInvalid' }
+        if (wire === null ? level !== 'off'
+          : typeof wire !== 'string' || wire.length === 0) {
+          return { index, key: 'modelReasoningInvalid' }
+        }
+      }
     }
   }
   return undefined

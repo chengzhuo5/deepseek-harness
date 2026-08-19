@@ -18,7 +18,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { DiscoveredModelView, IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
 import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import { formatCapacity, parseCapacity } from './DeepSeekModelsEditor.tsx'
+import { formatCapacity, parseCapacity, declaredReasoningEfforts, THINKING_LEVELS } from './DeepSeekModelsEditor.tsx'
 import type { DeepSeekModelDraft } from './DeepSeekModelsEditor.tsx'
 import { messageOf } from './store.ts'
 import type { en } from './locales.ts'
@@ -110,6 +110,48 @@ function IconTrash(): ReactNode {
         stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"
       />
     </svg>
+  )
+}
+
+/** The thinking-levels control for one model row's advanced drawer. */
+interface ThinkLevelsProps {
+  /** The row whose levels this control edits. */
+  model: ModelDraft
+  /** Row position, for the control's accessible name. */
+  index: number
+  /** Disable every control (read-only deployment or a pending write). */
+  disabled: boolean
+  /** Section copy. */
+  t: (key: keyof typeof en) => string
+  /** Declare or retract one level. */
+  onChange: (level: string, checked: boolean) => void
+}
+
+/** A row's offered thinking levels: one checkbox per pi-ai level. */
+function ThinkLevels(props: ThinkLevelsProps): ReactNode {
+  const { model, index, disabled, t, onChange } = props
+  const declared = declaredReasoningEfforts(model)
+  const offered = new Set<string>(declared === undefined ? [] : Object.keys(declared))
+  const labelOf = (level: string): string => t('modelThinkLevels') + ' ' + String(index + 1) + ' ' + level
+  return (
+    <label className={styles['thinkField']}>
+      <span className={styles['modelFieldLabel']}>{t('modelThinkLevels')}</span>
+      <span className={styles['thinkLevels']}>
+        {THINKING_LEVELS.map(level => (
+          <label className={styles['thinkLevel']} key={level}>
+            <input
+              type="checkbox"
+              checked={offered.has(level)}
+              disabled={disabled}
+              aria-label={labelOf(level)}
+              onChange={(event) => { onChange(level, event.target.checked) }}
+            />
+            <span>{level}</span>
+          </label>
+        ))}
+      </span>
+      <span className={styles['thinkHint']}>{t('modelThinkHint')}</span>
+    </label>
   )
 }
 
@@ -210,7 +252,9 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
     })
   }
 
-  const patch = (index: number, next: Record<string, string | number | undefined>): void => {
+  const patch = (index: number,
+    next: Record<string, string | number | boolean | null | undefined | Record<string, string | null>>,
+  ): void => {
     onChange(models.map((model, at) => {
       if (at !== index) return model
       // Rebuilt rather than spread over: an emptied optional field has to leave
@@ -225,6 +269,20 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
         Object.entries({ ...model, ...next }).filter(([key]) => !cleared.has(key)),
       )
     }))
+  }
+
+  /** Declare or retract one offered thinking level of one model row. */
+  const toggleThinkLevel = (model: ModelDraft, index: number, level: string, checked: boolean): void => {
+    const declared = declaredReasoningEfforts(model) ?? {}
+    const next: Record<string, string | null> = Object.fromEntries(
+      Object.entries(declared).filter(([key]) => checked || key !== level),
+    )
+    if (checked) next[level] = level === 'off' ? null : level
+    // Retracting every level removes the field: it returns the row to the
+    // adapter's default rather than declaring an empty set the schema refuses.
+    patch(index, Object.keys(next).length === 0
+      ? { reasoningEfforts: undefined }
+      : { reasoningEfforts: next })
   }
 
   const fetchModels = async (): Promise<void> => {
@@ -417,6 +475,13 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
                     onChange={(event) => { editCapacity(index, 'maxTokens', event.target.value) }}
                   />
                 </label>
+                <ThinkLevels
+                  model={model}
+                  index={index}
+                  disabled={disabled}
+                  t={t}
+                  onChange={(level, checked) => { toggleThinkLevel(model, index, level, checked) }}
+                />
               </div>
             )
             : null}

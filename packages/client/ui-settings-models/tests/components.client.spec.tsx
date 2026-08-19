@@ -503,6 +503,26 @@ describe('ModelsSection', () => {
     expect(validateDeepSeekModels([{ id: 'model', maxTokens: 0 }]))
       .toEqual({ index: 0, key: 'modelMaxTokensInvalid' })
     expect(validateDeepSeekModels([{ id: 'model', maxTokens: 8192 }])).toBeUndefined()
+    // reasoningEfforts is the pi-ai per-model field: absent and false declare
+    // nothing, while a declared dict must name known levels, keep wire
+    // spellings non-empty except a valueless "off", and offer a level beyond
+    // "off" or the model could never actually think.
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEfforts: false }])).toBeUndefined()
+    expect(validateDeepSeekModels([
+      { id: 'model', reasoningEfforts: { off: null, low: 'low', high: 'high' } },
+    ])).toBeUndefined()
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEfforts: 'high' }]))
+      .toEqual({ index: 0, key: 'modelReasoningInvalid' })
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEfforts: [] }]))
+      .toEqual({ index: 0, key: 'modelReasoningInvalid' })
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEfforts: { off: null } }]))
+      .toEqual({ index: 0, key: 'modelReasoningInvalid' })
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEfforts: { turbo: 'high' } }]))
+      .toEqual({ index: 0, key: 'modelReasoningInvalid' })
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEfforts: { high: '' } }]))
+      .toEqual({ index: 0, key: 'modelReasoningInvalid' })
+    expect(validateDeepSeekModels([{ id: 'model', reasoningEfforts: { medium: null } }]))
+      .toEqual({ index: 0, key: 'modelReasoningInvalid' })
   })
 
   it('reads context windows written as counts, thousands, or millions', () => {
