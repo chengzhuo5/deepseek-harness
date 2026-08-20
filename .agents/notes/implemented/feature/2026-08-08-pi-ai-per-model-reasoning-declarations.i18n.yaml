@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-08-pi-ai-per-model-reasoning-declarations.md
-2026-08-08-pi-ai-per-model-reasoning-declarations.md: c9bb43ae1b55e7000c1b8df94b868eda1e840f13
-2026-08-08-pi-ai-per-model-reasoning-declarations.zh.md: aa950b5bd36d7ed3f226eff0ea13722a37b242ad
+2026-08-08-pi-ai-per-model-reasoning-declarations.md: e617c6a3fb8c29c9b4c2f95fee5ab9ee34506c35
+2026-08-08-pi-ai-per-model-reasoning-declarations.zh.md: 7ee76e756986d3494108d95bf36cad39cce45951
