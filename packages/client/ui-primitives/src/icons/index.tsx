@@ -361,6 +361,16 @@ export const IconThinkOutline16 = ({ size = 16, className }: IconProps) => (
   </svg>
 )
 
+/** ic_ds_bell_outline_16: session-completion browser-notification entry point. */
+export const IconBellOutline16 = ({ size = 16, className }: IconProps) => (
+  <svg width={size} height={size} className={className} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M8 16C9.10457 16 10 15.1046 10 14H6C6 15.1046 6.89543 16 8 16ZM13.605 11.39L12.82 10.605C12.337 10.122 12 9.455 12 8.768V6.75C12 4.143 10.567 2.01 8 1.457V1C8 0.448 7.552 0 7 0C6.448 0 6 0.448 6 1V1.457C3.433 2.01 2 4.143 2 6.75V8.768C2 9.455 1.663 10.122 1.18 10.605L0.395 11.39C-0.155 11.94 0.24 12.85 1 12.85H15C15.76 12.85 16.155 11.94 15.605 11.39Z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
 /** ic_ds_agent_preset_outline_16 (figma extract): node interiors knock out to transparency via mask, so the glyph sits on any fill. */
 export const IconAgentPresetOutline16 = ({ size = 16, className }: IconProps) => (
   <svg width={size} height={size} className={className} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

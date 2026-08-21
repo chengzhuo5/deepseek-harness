@@ -258,6 +258,12 @@
     - id: ui-jobs
       name: '@deepseek-ai/dsh-client-ui-jobs'
 
+    # Completion notification: the session-header bell requests browser
+    # permission; the watcher notifies when a session's task finishes while
+    # the page is in the background.
+    - id: ui-session-notification
+      name: '@deepseek-ai/dsh-client-ui-session-notification'
+
     # Goal surface: GoalBar in the input dock over the goal session projection.
     - id: ui-goal
       name: '@deepseek-ai/dsh-client-ui-goal'

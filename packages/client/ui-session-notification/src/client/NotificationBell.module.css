@@ -1,0 +1,22 @@
+.bell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 3px 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.bell:hover:not(:disabled),
+.bell:focus-visible:not(:disabled) {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.bell:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
