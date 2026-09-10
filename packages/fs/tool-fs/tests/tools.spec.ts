@@ -967,7 +967,11 @@ describe('sandbox escalation API (write/edit)', () => {
 
     expect(result.isError).toBe(false)
     expect(prompted).not.toHaveBeenCalled()
-    expect(fs.stamped).toEqual([{ mode: 'danger-full-access', workspaceRoot: resolve('/session-project') }])
+    expect(fs.stamped).toEqual([{
+      mode: 'danger-full-access',
+      workspaceRoot: resolve('/session-project'),
+      sessionId: SessionId('sess-fs-esc'),
+    }])
   })
 
   it('escalation without an approval service fails closed', async () => {
