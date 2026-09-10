@@ -72,6 +72,12 @@
     - id: ui-open-in-app
       name: '@deepseek-ai/dsh-client-ui-open-in-app'
 
+    # Session-header bell arming browser notifications: the watcher raises a
+    # system notification when a session's task finishes while the page is in
+    # the background; the bell is the permission gesture.
+    - id: ui-session-notification
+      name: '@deepseek-ai/dsh-client-ui-session-notification'
+
     - id: workspace
       name: '@deepseek-ai/dsh-workspace'
 
