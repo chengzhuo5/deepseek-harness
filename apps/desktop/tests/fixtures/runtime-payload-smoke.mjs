@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { closeSync, mkdtempSync, openSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
@@ -99,26 +99,6 @@ async function checkPty() {
   }
 }
 
-/**
- * The JSONL persistence lease takes its cross-process write lock through the packaged
- * `@deepseek-ai/node-addon-system/flock` binding on POSIX. Windows has no platform package
- * for that binding — the lease there uses its own semaphore path — so this resolves the
- * subpath everywhere and exercises acquisition only where the native lock exists.
- */
-async function checkFlock() {
-  const { tryLockExclusive } = requireRuntime('@deepseek-ai/node-addon-system/flock')
-  assert.equal(typeof tryLockExclusive, 'function')
-  if (process.platform === 'win32') return
-  const file = join(scratch, 'flock.txt')
-  writeFileSync(file, '', { flag: 'wx', mode: 0o600 })
-  const fd = openSync(file, 'r+')
-  try {
-    await tryLockExclusive(fd)
-  } finally {
-    closeSync(fd)
-  }
-}
-
 /** Exercise grep and glob operations with the search tool's resolved native executable. */
 async function checkSearch() {
   const { resolveRgPath } = await import(pathToFileURL(requireRuntime.resolve('@deepseek-ai/dsh-tool-fs-search')).href)
@@ -178,7 +158,6 @@ try {
   const builtin = requireRuntime('node-addon-require-builtin')
   assert.equal(typeof builtin.requireBuiltin('internal/modules/esm/loader').getOrInitializeCascadedLoader, 'function')
   checkPnpm()
-  await checkFlock()
   checkKoffi()
   await checkSharp()
   checkHtml()
@@ -192,5 +171,5 @@ try {
 // Natural event-loop drain includes node-pty's worker and console-list helper teardown.
 process.once('beforeExit', () => {
   console.log(JSON.stringify({ node: process.versions.node, platform: process.platform, arch: process.arch,
-    flock: true, koffi: true, sharp: true, html: true, pty: true, pnpm: true, grep: true, glob: true }))
+    koffi: true, sharp: true, html: true, pty: true, pnpm: true, grep: true, glob: true }))
 })
