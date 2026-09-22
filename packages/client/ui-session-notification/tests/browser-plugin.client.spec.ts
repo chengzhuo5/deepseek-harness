@@ -42,11 +42,11 @@ async function bench(): Promise<{ ctx: Context; fiber: ReturnType<Context['plugi
   // empty-list source so apply boots without a real runtime.
   ctx.provide('sessions', {
     list: {
-      getSnapshot: () => ({ ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined }),
+      getSnapshot: () => ({ ids: [], byId: {}, phase: 'ready', projectionsBySession: {} }),
       subscribe: () => () => {},
     },
-    open: () => {},
   })
+  ctx.provide('uiWorkspace', { openSession: () => {} } as never)
   ctx.provide('locale', new LocaleRuntime(ctx))
   // These specs assert the shipped Chinese copy. There is no jsdom `window` in
   // this lane, so browser-language detection never runs and the locale comes
@@ -70,8 +70,8 @@ function row(overrides: Partial<SessionSummary> & { id: string }): SessionSummar
 /** A mutable list source the watcher subscribes to. */
 function listSource(): { source: SessionListSource; state: SessionListState; emit: () => void } {
   const state: SessionListState = {
-    ids: [], byId: {}, current: undefined, phase: 'ready',
-    subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
+    ids: [], byId: {}, phase: 'ready',
+    projectionsBySession: {},
   }
   const listeners = new Set<() => void>()
   const source: SessionListSource = {
@@ -110,7 +110,7 @@ function deps() {
 
 describe('ui-session-notification browser half', () => {
   it('declares the services it binds', () => {
-    expect(inject).toEqual(['sessions', 'slots', 'locale'])
+    expect(inject).toEqual(['sessions', 'slots', 'locale', 'uiWorkspace'])
   })
 
   it('registers the header bell, and fiber teardown removes it (HMR safety)', async () => {

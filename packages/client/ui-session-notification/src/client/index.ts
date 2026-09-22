@@ -11,6 +11,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { NotificationBell } from './NotificationBell.tsx'
 import { SessionCompletionWatcher, type NotificationPermissionSource, type NotificationSink, type SessionListSource } from './session-notification.ts'
 import { en, NS, zh, type SessionNotificationKey } from './locales.ts'
@@ -26,8 +27,8 @@ export type { NotificationBellProps } from './NotificationBell.tsx'
 export { SessionCompletionWatcher } from './session-notification.ts'
 export type { NotificationPermissionSource, NotificationSink, SessionListSource } from './session-notification.ts'
 
-/** Required services: the sessions list (watcher + bell seat) and locale copy. */
-export const inject = ['sessions', 'slots', 'locale']
+/** Required services: the sessions list (watcher + bell seat), locale copy, and workspace navigation. */
+export const inject = ['sessions', 'slots', 'locale', 'uiWorkspace']
 
 /**
  * Client plugin body: register the dictionaries, the header bell, and the
@@ -72,7 +73,11 @@ export function apply(ctx: ClientContext): void {
     }
     const title = (row: SessionSummary): string => row.displayTitle
     const body = ctx.locale.bind(NS)('notification.body')
-    const open = (sessionId: SessionId): void => { ctx.sessions.open(sessionId) }
+    const open = (sessionId: SessionId): void => {
+      const workspace = ctx.get('uiWorkspace')
+      if (workspace === undefined) throw new Error('ui-session-notification: uiWorkspace service unavailable')
+      workspace.openSession(sessionId)
+    }
     const watcher = new SessionCompletionWatcher(sessions, permission, sink, title, body, open)
     return watcher.start()
   }, 'ui-session-notification: completion watcher')

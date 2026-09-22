@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { IconBellOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconBellOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { NS } from './locales.ts'
@@ -57,7 +57,7 @@ export function NotificationBell({ t }: NotificationBellProps): React.JSX.Elemen
         })
       }}
     >
-      <IconBellOutline16 />
+      <IconBellOutlineRegular />
     </button>
   )
 }
