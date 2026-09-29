@@ -55,8 +55,9 @@ function createAuth(
   store: RecordCredentials,
   maxAgeDays = 30,
   processOwner: object = {},
+  authToken = true,
 ): Promise<BrowserAuth> {
-  return BrowserAuth.create(processOwner, credentials(store), maxAgeDays)
+  return BrowserAuth.create(processOwner, credentials(store), maxAgeDays, authToken)
 }
 
 function request(url: string, authority = '127.0.0.1:3080', init?: {
@@ -269,5 +270,16 @@ describe('BrowserAuth', () => {
 
     await expect(createAuth(new RecordCredentials(), Number.MAX_SAFE_INTEGER))
       .rejects.toThrow(/safe timestamp range/u)
+  })
+
+  it('admits every request when the deployment disables authentication', async () => {
+    const auth = await createAuth(new RecordCredentials(), 30, {}, false)
+    expect(auth.isAuthenticated({ headers: new Headers() })).toBe(true)
+    expect(auth.isAuthenticated(request('/', '127.0.0.1:3080'))).toBe(true)
+    expect(auth.isAuthenticated({ headers: { host: 'bad host' } })).toBe(true)
+
+    const res = response()
+    expect(auth.authorizeIndex(request('/'), res.value)).toBe(true)
+    expect(res.state.headers).toBeUndefined()
   })
 })
